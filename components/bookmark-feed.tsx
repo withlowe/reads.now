@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { format, parseISO } from "date-fns"
-import { PlusIcon, RefreshCw, Download, Upload, Check, AlertCircle } from "lucide-react"
+import { PlusIcon, RefreshCw, Download, Upload, Check, AlertCircle, ArrowUp } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +17,11 @@ import { SearchBar } from "@/components/search-bar"
 interface BookmarkFeedProps {
   searchQuery: string
   setSearchQuery: (query: string) => void
+  compactMode: boolean
+  setCompactMode: (mode: boolean) => void
 }
 
-export function BookmarkFeed({ searchQuery, setSearchQuery }: BookmarkFeedProps) {
+export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setCompactMode }: BookmarkFeedProps) {
   const { bookmarks, addBookmark, removeBookmark, updateBookmarks, markAsRead, importBookmarks } = useBookmarkStore()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -220,6 +222,17 @@ export function BookmarkFeed({ searchQuery, setSearchQuery }: BookmarkFeedProps)
               <span className="sr-only">Export</span>
             </button>
             <input type="file" ref={fileInputRef} accept=".json" className="hidden" onChange={handleImport} />
+
+            {compactMode && (
+              <button
+                className="p-1.5 text-gray-500 hover:text-[#00FF9D] transition-colors ml-2"
+                title="Show header"
+                onClick={() => setCompactMode(false)}
+              >
+                <ArrowUp className="h-4 w-4" />
+                <span className="sr-only">Show header</span>
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
@@ -363,7 +376,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery }: BookmarkFeedProps)
               ) : (
                 <div className="flex items-center justify-center p-6 text-red-600">
                   <AlertCircle className="mr-2 h-5 w-5" />
-                  <p>Error exporting bookmarks. Please try again.</p>
+                  <p>Error importing bookmarks. Please try again.</p>
                 </div>
               )}
             </div>
@@ -404,8 +417,30 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
   const latestContent = bookmark.latestContent[0]
   const isNew = latestContent?.isNew
 
+  // Handle click on the bookmark entry to mark content as read
+  const handleEntryClick = (e: React.MouseEvent) => {
+    // Only mark as read if the click was directly on the container
+    // and not on any of its interactive children
+    if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains("bookmark-entry-container")) {
+      if (latestContent && latestContent.isNew) {
+        onContentClick(bookmark.id, latestContent.id)
+      }
+    }
+  }
+
+  // Handle click on the description to mark content as read
+  const handleDescriptionClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent the parent div's click handler from firing
+    if (latestContent) {
+      onContentClick(bookmark.id, latestContent.id)
+    }
+  }
+
   return (
-    <div className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
+    <div
+      className="p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer bookmark-entry-container"
+      onClick={handleEntryClick}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
         <div className="flex items-baseline flex-wrap gap-2">
           <a
@@ -416,48 +451,35 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
             dangerouslySetInnerHTML={{
               __html: searchQuery ? highlightSearchTerm(bookmark.name) : bookmark.name,
             }}
+            onClick={(e) => {
+              // Stop propagation to prevent the parent div's click handler from firing
+              e.stopPropagation()
+            }}
           />
           {isNew && <span className="text-xs bg-[#00FF9D] text-black px-1.5 py-0.5 font-medium">New</span>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs text-gray-500 font-mono">{formatDate(bookmark.lastUpdated)}</span>
-          <button onClick={onRemove} className="text-xs text-gray-500 hover:text-black font-mono">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            className="text-xs text-gray-500 hover:text-black font-mono"
+          >
             Remove
           </button>
         </div>
       </div>
 
       {latestContent && (
-        <div className="space-y-2">
-          <a
-            href={latestContent.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-gray-700 hover:text-black flex items-center gap-1"
-            dangerouslySetInnerHTML={{
-              __html: searchQuery ? highlightSearchTerm(latestContent.title) : latestContent.title,
-            }}
-          />
-
-          <div
-            className="text-sm sm:text-base text-gray-600 leading-relaxed cursor-pointer"
-            onClick={() => onContentClick(bookmark.id, latestContent.id)}
-          >
-            <p
-              dangerouslySetInnerHTML={{
-                __html: searchQuery
-                  ? highlightSearchTerm(
-                      latestContent.summary.length > 160
-                        ? latestContent.summary.substring(0, 160) + "..."
-                        : latestContent.summary,
-                    )
-                  : latestContent.summary.length > 160
-                    ? latestContent.summary.substring(0, 160) + "..."
-                    : latestContent.summary,
-              }}
-            />
-          </div>
-        </div>
+        <div
+          className="text-base sm:text-base font-medium text-gray-500 hover:text-black cursor-pointer transition-colors"
+          dangerouslySetInnerHTML={{
+            __html: searchQuery ? highlightSearchTerm(latestContent.title) : latestContent.title,
+          }}
+          onClick={handleDescriptionClick}
+        />
       )}
     </div>
   )

@@ -16,7 +16,7 @@ export function SearchBar({ searchQuery, setSearchQuery }: SearchBarProps) {
         <Input
           type="search"
           placeholder="Search bookmarks..."
-          className="pl-9 h-10 w-full"
+          className="pl-9 h-10 w-full text-base"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
