@@ -7,9 +7,9 @@ export default function Home() {
       <VercelBackground />
       <div className="relative z-10">
         <div className="w-full px-3 sm:px-4 py-12 sm:py-16 text-center">
-          <h1 className="text-4xl sm:text-5xl font-medium tracking-tight mb-4">Your content, all in one place.</h1>
+          <h1 className="text-4xl sm:text-5xl font-medium tracking-tight mb-4">Your bookmarks, Always updated.</h1>
           <p className="text-lg sm:text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Reader provides the tools to collect, organize, and stay updated with content from your favorite websites.
+           Collect, organize, and stay updated with your bookmarks.
           </p>
         </div>
         <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 pb-12 sm:pb-16">

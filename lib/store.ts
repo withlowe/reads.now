@@ -5,7 +5,7 @@ export interface BookmarkedContent {
   id: number
   title: string
   summary: string
-  publishedAt: string // Changed from Date to string
+  publishedAt: string
   url: string
   isNew: boolean
   isRead: boolean
@@ -17,7 +17,7 @@ export interface BookmarkedSite {
   url: string
   description: string
   bookmarked: boolean
-  lastUpdated: string // Changed from Date to string
+  lastUpdated: string
   latestContent: BookmarkedContent[]
 }
 
@@ -27,10 +27,8 @@ interface BookmarkState {
   removeBookmark: (id: number) => void
   updateBookmarks: () => Promise<void>
   markAsRead: (siteId: number, contentId: number) => void
+  importBookmarks: (importedBookmarks: BookmarkedSite[]) => void
 }
-
-// Helper function to convert Date objects to ISO strings
-const dateToString = (date: Date): string => date.toISOString()
 
 // Sample content titles for updates
 const contentTitles = [
@@ -250,6 +248,34 @@ export const useBookmarkStore = create<BookmarkState>()(
               : bookmark,
           ),
         }))
+      },
+
+      importBookmarks: (importedBookmarks: BookmarkedSite[]) => {
+        // Merge imported bookmarks with existing ones
+        set((state) => {
+          // Get the highest ID to ensure new IDs don't conflict
+          const highestId = Math.max(...state.bookmarks.map((b) => b.id), 0)
+
+          // Process imported bookmarks to ensure they have unique IDs
+          const processedImports = importedBookmarks.map((bookmark, index) => ({
+            ...bookmark,
+            id: highestId + index + 1,
+            latestContent: bookmark.latestContent.map((content, contentIndex) => ({
+              ...content,
+              id: (highestId + index + 1) * 100 + contentIndex,
+            })),
+          }))
+
+          // Create a map of existing bookmarks by URL for quick lookup
+          const existingBookmarksByUrl = new Map(state.bookmarks.map((bookmark) => [bookmark.url, bookmark]))
+
+          // Filter out imports that already exist (by URL)
+          const newBookmarks = processedImports.filter((bookmark) => !existingBookmarksByUrl.has(bookmark.url))
+
+          return {
+            bookmarks: [...state.bookmarks, ...newBookmarks],
+          }
+        })
       },
     }),
     {

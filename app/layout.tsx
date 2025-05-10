@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Reader - Your content platform",
+  title: "Reads.now - Your content platform",
   description: "A minimal bookmark reader that updates with new content",
     generator: 'v0.dev'
 }

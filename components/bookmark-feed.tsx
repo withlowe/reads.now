@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { PlusIcon, RefreshCw, X } from "lucide-react"
+import { PlusIcon, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,7 +54,7 @@ export function BookmarkFeed() {
   return (
     <div className="bg-white border border-gray-100 shadow-lg w-full">
       <div className="p-3 sm:p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <h2 className="text-xl sm:text-2xl font-medium tracking-tight">Your Bookmarks</h2>
+        <h2 className="text-xl sm:text-2xl font-medium tracking-tight">Bookmarks</h2>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
@@ -88,20 +88,21 @@ export function BookmarkFeed() {
                 className="flex-1 text-sm h-9"
                 autoFocus
               />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" className="h-9 text-sm bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90">
+                Add Bookmark
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsAddingBookmark(false)}
-                className="ml-1 h-9 w-9 p-0 flex-none"
+                className="h-9 text-sm"
               >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Cancel</span>
+                Cancel
               </Button>
             </div>
-            <Button type="submit" size="sm" className="h-9 text-sm bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90">
-              Add Bookmark
-            </Button>
           </form>
         </div>
       )}
@@ -145,47 +146,37 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick }: BookmarkEntryProp
 
   return (
     <div className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
-      <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <a
-          href={bookmark.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-lg sm:text-xl font-medium tracking-tight hover:text-[#00FF9D] transition-colors"
-        >
-          {bookmark.name}
-        </a>
+      <div className="mb-3 flex items-baseline justify-between">
+        <div className="flex items-baseline">
+          <a
+            href={bookmark.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-lg sm:text-xl font-medium tracking-tight hover:text-[#00FF9D] transition-colors"
+          >
+            {bookmark.name}
+          </a>
+          {bookmark.latestContent[0]?.isNew && (
+            <span className="ml-2 text-xs bg-[#00FF9D] text-black px-1.5 py-0.5 font-medium">New</span>
+          )}
+        </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500 tabular-nums">{formatDate(bookmark.lastUpdated)}</span>
-          <Button variant="ghost" size="sm" onClick={onRemove} className="h-7 text-xs text-gray-500 hover:text-black">
+          <span className="text-xs text-gray-500 font-mono tabular-nums">{formatDate(bookmark.lastUpdated)}</span>
+          <button onClick={onRemove} className="text-xs text-gray-500 hover:text-black font-mono">
             Remove
-          </Button>
+          </button>
         </div>
       </div>
 
       {bookmark.latestContent.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <a
-              href={bookmark.latestContent[0].url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => onContentClick(bookmark.id, bookmark.latestContent[0].id)}
-              className={`text-base sm:text-lg font-medium tracking-tight hover:text-[#00FF9D] transition-colors ${
-                bookmark.latestContent[0].isRead ? "text-gray-500" : "text-black"
-              }`}
-            >
-              {bookmark.latestContent[0].title}
-            </a>
-            {bookmark.latestContent[0].isNew && (
-              <span className="text-xs bg-[#00FF9D] text-black px-1.5 py-0.5 font-medium">New</span>
-            )}
-          </div>
-          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-            {bookmark.latestContent[0].summary.length > 160
-              ? bookmark.latestContent[0].summary.substring(0, 160) + "..."
-              : bookmark.latestContent[0].summary}
-          </p>
-        </div>
+        <p
+          className="text-sm sm:text-base text-gray-600 leading-relaxed"
+          onClick={() => onContentClick(bookmark.id, bookmark.latestContent[0].id)}
+        >
+          {bookmark.latestContent[0].summary.length > 160
+            ? bookmark.latestContent[0].summary.substring(0, 160) + "..."
+            : bookmark.latestContent[0].summary}
+        </p>
       )}
     </div>
   )
