@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useBookmarkStore } from "@/lib/store"
 import { cn } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { SearchBar } from "@/components/search-bar"
 
@@ -23,7 +22,6 @@ interface BookmarkFeedProps {
 
 export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setCompactMode }: BookmarkFeedProps) {
   const { bookmarks, addBookmark, removeBookmark, updateBookmarks, markAsRead, importBookmarks } = useBookmarkStore()
-  const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [isUpdating, setIsUpdating] = useState(false)
@@ -34,6 +32,10 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [importStatus, setImportStatus] = useState<"idle" | "success" | "error">("idle")
   const [exportStatus, setExportStatus] = useState<"idle" | "success" | "error">("idle")
+  const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" | "info" | null }>({
+    text: "",
+    type: null,
+  })
 
   // Filter bookmarks based on search query
   const filteredBookmarks = bookmarks.filter((bookmark) => {
@@ -63,22 +65,23 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
     return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
   })
 
+  // Show status message and clear it after a delay
+  const showStatus = (text: string, type: "success" | "error" | "info") => {
+    setStatusMessage({ text, type })
+    setTimeout(() => {
+      setStatusMessage({ text: "", type: null })
+    }, 3000)
+  }
+
   // Update bookmarks with new content
   const handleUpdateBookmarks = async () => {
     setIsUpdating(true)
     try {
       await updateBookmarks()
-      toast({
-        title: "Update complete",
-        description: "Your bookmarks have been checked for new content.",
-      })
+      showStatus("Bookmarks updated successfully", "success")
     } catch (error) {
       console.error("Error updating bookmarks:", error)
-      toast({
-        title: "Update failed",
-        description: "There was an error checking for new content.",
-        variant: "destructive",
-      })
+      showStatus("Failed to update bookmarks", "error")
     } finally {
       setIsUpdating(false)
     }
@@ -95,19 +98,12 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
     setIsAddingBookmarkLoading(true)
     try {
       await addBookmark(newBookmarkUrl)
-      toast({
-        title: "Bookmark added",
-        description: "The website has been added to your bookmarks.",
-      })
+      showStatus("Bookmark added successfully", "success")
       setNewBookmarkUrl("")
       setIsAddingBookmark(false)
     } catch (error) {
       console.error("Error adding bookmark:", error)
-      toast({
-        title: "Failed to add bookmark",
-        description: "There was an error adding the bookmark. Please try again.",
-        variant: "destructive",
-      })
+      showStatus("Failed to add bookmark", "error")
     } finally {
       setIsAddingBookmarkLoading(false)
     }
@@ -255,6 +251,20 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
             </Button>
           </div>
         </div>
+
+        {/* Status message */}
+        {statusMessage.type && (
+          <div
+            className={cn(
+              "px-4 py-2 text-sm text-center",
+              statusMessage.type === "success" && "bg-green-50 text-green-700",
+              statusMessage.type === "error" && "bg-red-50 text-red-700",
+              statusMessage.type === "info" && "bg-blue-50 text-blue-700",
+            )}
+          >
+            {statusMessage.text}
+          </div>
+        )}
 
         {isAddingBookmark && (
           <div className="p-3 sm:p-4 border-b border-gray-100 bg-gray-50">

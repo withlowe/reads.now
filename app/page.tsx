@@ -27,7 +27,7 @@ export default function Home() {
               onClick={() => setCompactMode(true)}
               className="inline-flex items-center text-sm text-gray-500 hover:text-black transition-colors gap-1"
             >
-              <span>Switch to compact view</span>
+              <span>reads.now</span>
               <ArrowDown className="h-3 w-3" />
             </button>
           </div>

@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -12,8 +11,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Reads.now - Your content platform",
-  description: "A minimal bookmark reader that updates with new content",
+  title: "Reads.now",
+  description: "Bookmarks that updates with new content",
     generator: 'v0.dev'
 }
 
@@ -27,7 +26,6 @@ export default function RootLayout({
       <body className={`${inter.variable} bg-white text-black font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <main>{children}</main>
-          <Toaster />
         </ThemeProvider>
       </body>
     </html>
