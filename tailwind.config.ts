@@ -57,6 +57,9 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        vercel: {
+          mint: "#00FF9D",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

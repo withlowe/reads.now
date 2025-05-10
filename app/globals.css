@@ -22,7 +22,7 @@
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
 
-    --accent: 0 0% 96.1%;
+    --accent: 160 100% 50%;
     --accent-foreground: 0 0% 9%;
 
     --destructive: 0 84.2% 60.2%;
@@ -30,9 +30,9 @@
 
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --ring: 160 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0rem;
   }
 
   .dark {
@@ -54,15 +54,15 @@
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
 
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 160 100% 50%;
+    --accent-foreground: 0 0% 9%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --ring: 160 100% 50%;
   }
 }
 
@@ -72,5 +72,20 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Typography refinements */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply tracking-tight;
+  }
+
+  p {
+    @apply leading-relaxed;
   }
 }

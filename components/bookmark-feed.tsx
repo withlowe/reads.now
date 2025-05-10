@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { PlusIcon, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,10 @@ export function BookmarkFeed() {
   // Sort bookmarks by last updated time (most recent first)
   const sortedBookmarks = [...bookmarks]
     .filter((site) => site.bookmarked)
-    .sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime())
+    .sort((a, b) => {
+      // Parse ISO strings back to Date objects for comparison
+      return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+    })
 
   // Update bookmarks with new content
   const handleUpdateBookmarks = async () => {
@@ -49,51 +52,67 @@ export function BookmarkFeed() {
   }
 
   return (
-    <div className="bg-white border border-gray-100 shadow-lg">
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-        <h2 className="text-xl font-medium">Your Bookmarks</h2>
-        <div className="flex items-center gap-3">
+    <div className="bg-white border border-gray-100 shadow-lg w-full">
+      <div className="p-3 sm:p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-medium tracking-tight">Your Bookmarks</h2>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={handleUpdateBookmarks}
             disabled={isUpdating}
-            className="h-8 text-xs gap-1.5"
+            className="h-9 text-sm gap-1.5 flex-1 sm:flex-initial"
           >
-            <RefreshCw className={cn("h-3 w-3", isUpdating && "animate-spin")} />
+            <RefreshCw className={cn("h-3.5 w-3.5", isUpdating && "animate-spin")} />
             {isUpdating ? "Updating..." : "Update"}
           </Button>
-          <Button size="sm" onClick={() => setIsAddingBookmark(true)} className="h-8 text-xs gap-1.5">
-            <PlusIcon className="h-3 w-3" />
+          <Button
+            size="sm"
+            onClick={() => setIsAddingBookmark(true)}
+            className="h-9 text-sm gap-1.5 flex-1 sm:flex-initial bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90"
+          >
+            <PlusIcon className="h-3.5 w-3.5" />
             Add Bookmark
           </Button>
         </div>
       </div>
 
       {isAddingBookmark && (
-        <div className="p-4 border-b border-gray-100 bg-gray-50">
-          <form onSubmit={handleAddBookmark} className="flex gap-3 items-center">
+        <div className="p-3 sm:p-4 border-b border-gray-100 bg-gray-50">
+          <form onSubmit={handleAddBookmark} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
             <Input
               value={newBookmarkUrl}
               onChange={(e) => setNewBookmarkUrl(e.target.value)}
               placeholder="Enter website URL"
-              className="flex-1"
+              className="flex-1 text-sm h-9"
               autoFocus
             />
-            <Button type="submit" size="sm">
-              Add
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingBookmark(false)}>
-              Cancel
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                type="submit"
+                size="sm"
+                className="h-9 text-sm flex-1 sm:flex-initial bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90"
+              >
+                Add
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddingBookmark(false)}
+                className="h-9 text-sm flex-1 sm:flex-initial"
+              >
+                Cancel
+              </Button>
+            </div>
           </form>
         </div>
       )}
 
       <div className="divide-y divide-gray-100">
         {sortedBookmarks.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p>No bookmarks yet. Add your first bookmark to get started.</p>
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-base">No bookmarks yet. Add your first bookmark to get started.</p>
           </div>
         ) : (
           sortedBookmarks.map((bookmark) => (
@@ -117,15 +136,30 @@ interface BookmarkEntryProps {
 }
 
 function BookmarkEntry({ bookmark, onRemove, onContentClick }: BookmarkEntryProps) {
+  // Safely format the date by parsing the ISO string
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "MM/dd/yyyy")
+    } catch (error) {
+      console.error("Error formatting date:", error)
+      return "Invalid date"
+    }
+  }
+
   return (
-    <div className="p-6 hover:bg-gray-50 transition-colors">
-      <div className="mb-3 flex items-center justify-between">
-        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+    <div className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
+      <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <a
+          href={bookmark.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-lg sm:text-xl font-medium tracking-tight hover:text-[#00FF9D] transition-colors"
+        >
           {bookmark.name}
         </a>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500">{format(new Date(bookmark.lastUpdated), "MM/dd/yyyy")}</span>
-          <Button variant="ghost" size="sm" onClick={onRemove} className="h-6 text-xs text-gray-500 hover:text-black">
+          <span className="text-xs text-gray-500 tabular-nums">{formatDate(bookmark.lastUpdated)}</span>
+          <Button variant="ghost" size="sm" onClick={onRemove} className="h-7 text-xs text-gray-500 hover:text-black">
             Remove
           </Button>
         </div>
@@ -139,17 +173,17 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick }: BookmarkEntryProp
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => onContentClick(bookmark.id, bookmark.latestContent[0].id)}
-              className={`text-sm hover:underline ${bookmark.latestContent[0].isRead ? "text-gray-500" : "text-black"}`}
+              className={`text-base sm:text-lg font-medium tracking-tight hover:text-[#00FF9D] transition-colors ${
+                bookmark.latestContent[0].isRead ? "text-gray-500" : "text-black"
+              }`}
             >
               {bookmark.latestContent[0].title}
             </a>
             {bookmark.latestContent[0].isNew && (
-              <span className="text-xs bg-gradient-to-r from-orange-500 to-red-500 text-white px-1.5 py-0.5 font-medium">
-                New
-              </span>
+              <span className="text-xs bg-[#00FF9D] text-black px-1.5 py-0.5 font-medium">New</span>
             )}
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
             {bookmark.latestContent[0].summary.length > 160
               ? bookmark.latestContent[0].summary.substring(0, 160) + "..."
               : bookmark.latestContent[0].summary}

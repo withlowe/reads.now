@@ -1,11 +1,11 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { persist, createJSONStorage } from "zustand/middleware"
 
 export interface BookmarkedContent {
   id: number
   title: string
   summary: string
-  publishedAt: Date
+  publishedAt: string // Changed from Date to string
   url: string
   isNew: boolean
   isRead: boolean
@@ -17,7 +17,7 @@ export interface BookmarkedSite {
   url: string
   description: string
   bookmarked: boolean
-  lastUpdated: Date
+  lastUpdated: string // Changed from Date to string
   latestContent: BookmarkedContent[]
 }
 
@@ -29,7 +29,10 @@ interface BookmarkState {
   markAsRead: (siteId: number, contentId: number) => void
 }
 
-// Initial mock data
+// Helper function to convert Date objects to ISO strings
+const dateToString = (date: Date): string => date.toISOString()
+
+// Initial mock data with string dates instead of Date objects
 const initialBookmarks: BookmarkedSite[] = [
   {
     id: 1,
@@ -37,14 +40,14 @@ const initialBookmarks: BookmarkedSite[] = [
     url: "https://techinsights.com",
     description: "Latest news and analysis on technology trends",
     bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
     latestContent: [
       {
         id: 101,
         title: "The Future of AI in Everyday Applications",
         summary:
           "How artificial intelligence is becoming integrated into our daily lives and transforming various industries from healthcare to entertainment. New developments in machine learning are making AI more accessible.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+        publishedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
         url: "https://techinsights.com/ai-everyday-apps",
         isNew: true,
         isRead: false,
@@ -57,14 +60,14 @@ const initialBookmarks: BookmarkedSite[] = [
     url: "https://designweekly.co",
     description: "Curated design inspiration and resources",
     bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
     latestContent: [
       {
         id: 201,
         title: "Color Theory in Modern Web Design",
         summary:
           "How to effectively use color psychology to improve user experience and create more engaging interfaces. This guide covers color harmony, accessibility considerations, and practical implementation tips.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
         url: "https://designweekly.co/color-theory",
         isNew: true,
         isRead: false,
@@ -77,14 +80,14 @@ const initialBookmarks: BookmarkedSite[] = [
     url: "https://devjournal.io",
     description: "Programming tutorials and best practices",
     bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5 hours ago
     latestContent: [
       {
         id: 301,
         title: "Building Scalable APIs with Node.js",
         summary:
           "Learn how to design and implement APIs that can handle millions of requests without compromising performance. This tutorial covers caching strategies, load balancing, and database optimization techniques.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
+        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5 hours ago
         url: "https://devjournal.io/scalable-apis",
         isNew: false,
         isRead: true,
@@ -97,14 +100,14 @@ const initialBookmarks: BookmarkedSite[] = [
     url: "https://startupinsider.com",
     description: "News and insights from the startup ecosystem",
     bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
     latestContent: [
       {
         id: 401,
         title: "How to Secure Your First Round of Funding",
         summary:
           "Expert advice on approaching investors and pitching your startup effectively. This guide includes templates for pitch decks, tips for networking with VCs, and common pitfalls to avoid during fundraising.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
         url: "https://startupinsider.com/first-funding",
         isNew: false,
         isRead: false,
@@ -117,14 +120,14 @@ const initialBookmarks: BookmarkedSite[] = [
     url: "https://digitalmarketingtoday.com",
     description: "Strategies and trends in digital marketing",
     bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), // 1.5 days ago
     latestContent: [
       {
         id: 501,
         title: "Social Media Strategies for 2025",
         summary:
           "Preparing your brand for the next evolution of social platforms and changing user behaviors. This article explores emerging trends, algorithm changes, and innovative content formats that will dominate social media.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
+        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), // 1.5 days ago
         url: "https://digitalmarketingtoday.com/social-2025",
         isNew: false,
         isRead: true,
@@ -155,13 +158,13 @@ export const useBookmarkStore = create<BookmarkState>()(
           url: formattedUrl,
           description: "",
           bookmarked: true,
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           latestContent: [
             {
               id: id * 100,
               title: `Latest from ${name}`,
               summary: `The most recent content from ${name}. Check back later for updates as new content is published.`,
-              publishedAt: new Date(),
+              publishedAt: new Date().toISOString(),
               url: `${formattedUrl}/latest`,
               isNew: true,
               isRead: false,
@@ -192,13 +195,13 @@ export const useBookmarkStore = create<BookmarkState>()(
             if (bookmark.bookmarked && Math.random() > 0.5) {
               return {
                 ...bookmark,
-                lastUpdated: new Date(),
+                lastUpdated: new Date().toISOString(),
                 latestContent: [
                   {
                     id: Math.floor(Math.random() * 10000),
                     title: `New: ${bookmark.name} Update ${new Date().toLocaleTimeString()}`,
                     summary: `Fresh content from ${bookmark.name} that was just published. This article covers the latest developments and provides insights into recent trends.`,
-                    publishedAt: new Date(),
+                    publishedAt: new Date().toISOString(),
                     url: `${bookmark.url}/new-content-${Date.now()}`,
                     isNew: true,
                     isRead: false,
@@ -234,6 +237,8 @@ export const useBookmarkStore = create<BookmarkState>()(
     }),
     {
       name: "bookmark-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ bookmarks: state.bookmarks }),
     },
   ),
 )
