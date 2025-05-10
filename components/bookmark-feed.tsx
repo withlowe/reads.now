@@ -4,118 +4,19 @@ import type React from "react"
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { Bookmark } from "lucide-react"
+import { PlusIcon, RefreshCw } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
-// Mock data for bookmarked sites and their updates
-const bookmarksData = [
-  {
-    id: 1,
-    name: "techinsights.com",
-    url: "https://techinsights.com",
-    description: "Latest news and analysis on technology trends",
-    bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    latestContent: [
-      {
-        id: 101,
-        title: "The Future of AI in Everyday Applications",
-        summary:
-          "How artificial intelligence is becoming integrated into our daily lives and transforming various industries from healthcare to entertainment. New developments in machine learning are making AI more accessible.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        url: "https://techinsights.com/ai-everyday-apps",
-        isNew: true,
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "designweekly.co",
-    url: "https://designweekly.co",
-    description: "Curated design inspiration and resources",
-    bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    latestContent: [
-      {
-        id: 201,
-        title: "Color Theory in Modern Web Design",
-        summary:
-          "How to effectively use color psychology to improve user experience and create more engaging interfaces. This guide covers color harmony, accessibility considerations, and practical implementation tips.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        url: "https://designweekly.co/color-theory",
-        isNew: true,
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "devjournal.io",
-    url: "https://devjournal.io",
-    description: "Programming tutorials and best practices",
-    bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-    latestContent: [
-      {
-        id: 301,
-        title: "Building Scalable APIs with Node.js",
-        summary:
-          "Learn how to design and implement APIs that can handle millions of requests without compromising performance. This tutorial covers caching strategies, load balancing, and database optimization techniques.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-        url: "https://devjournal.io/scalable-apis",
-        isNew: false,
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "startupinsider.com",
-    url: "https://startupinsider.com",
-    description: "News and insights from the startup ecosystem",
-    bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    latestContent: [
-      {
-        id: 401,
-        title: "How to Secure Your First Round of Funding",
-        summary:
-          "Expert advice on approaching investors and pitching your startup effectively. This guide includes templates for pitch decks, tips for networking with VCs, and common pitfalls to avoid during fundraising.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        url: "https://startupinsider.com/first-funding",
-        isNew: false,
-      },
-    ],
-  },
-  {
-    id: 5,
-    name: "digitalmarketingtoday.com",
-    url: "https://digitalmarketingtoday.com",
-    description: "Strategies and trends in digital marketing",
-    bookmarked: true,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
-    latestContent: [
-      {
-        id: 501,
-        title: "Social Media Strategies for 2025",
-        summary:
-          "Preparing your brand for the next evolution of social platforms and changing user behaviors. This article explores emerging trends, algorithm changes, and innovative content formats that will dominate social media.",
-        publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
-        url: "https://digitalmarketingtoday.com/social-2025",
-        isNew: false,
-      },
-    ],
-  },
-]
+import { useBookmarkStore } from "@/lib/store"
+import { cn } from "@/lib/utils"
 
 export function BookmarkFeed() {
-  const [bookmarks, setBookmarks] = useState(bookmarksData)
+  const { bookmarks, addBookmark, removeBookmark, updateBookmarks, markAsRead } = useBookmarkStore()
+
   const [isUpdating, setIsUpdating] = useState(false)
   const [newBookmarkUrl, setNewBookmarkUrl] = useState("")
-
-  // Toggle bookmark status for a website
-  const removeBookmark = (id: number) => {
-    setBookmarks(bookmarks.map((site) => (site.id === id ? { ...site, bookmarked: false } : site)))
-  }
+  const [isAddingBookmark, setIsAddingBookmark] = useState(false)
 
   // Sort bookmarks by last updated time (most recent first)
   const sortedBookmarks = [...bookmarks]
@@ -123,146 +24,111 @@ export function BookmarkFeed() {
     .sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime())
 
   // Update bookmarks with new content
-  const updateBookmarks = () => {
+  const handleUpdateBookmarks = async () => {
     setIsUpdating(true)
-
-    // Simulate API call delay
-    setTimeout(() => {
-      // Update some bookmarks with new content
-      const updatedBookmarks = bookmarks.map((bookmark) => {
-        // Randomly update some bookmarks (for demo purposes)
-        if (Math.random() > 0.5) {
-          return {
-            ...bookmark,
-            lastUpdated: new Date(),
-            latestContent: [
-              {
-                id: Math.floor(Math.random() * 10000),
-                title: `New: ${bookmark.name} Update ${new Date().toLocaleTimeString()}`,
-                summary: `Fresh content from ${bookmark.name} that was just published. This article covers the latest developments and provides insights into recent trends.`,
-                publishedAt: new Date(),
-                url: `${bookmark.url}/new-content-${Date.now()}`,
-                isNew: true,
-              },
-              ...bookmark.latestContent.map((content) => ({ ...content, isNew: false })),
-            ],
-          }
-        }
-        return bookmark
-      })
-
-      setBookmarks(updatedBookmarks)
-      setIsUpdating(false)
-    }, 1500)
+    await updateBookmarks()
+    setIsUpdating(false)
   }
 
   // Add a new bookmark
-  const addBookmark = (e: React.FormEvent) => {
+  const handleAddBookmark = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!newBookmarkUrl.trim()) {
       return
     }
 
-    // Ensure URL has protocol
-    let formattedUrl = newBookmarkUrl
-    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-      formattedUrl = "https://" + formattedUrl
-    }
-
-    // Extract domain name for the name
-    const name = formattedUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
-
-    const id = Math.max(...bookmarks.map((site) => site.id)) + 1
-
-    const bookmarkToAdd: BookmarkedSite = {
-      id,
-      name,
-      url: formattedUrl,
-      description: "",
-      bookmarked: true,
-      lastUpdated: new Date(),
-      latestContent: [
-        {
-          id: id * 100,
-          title: `Latest from ${name}`,
-          summary: `The most recent content from ${name}. Check back later for updates as new content is published.`,
-          publishedAt: new Date(),
-          url: `${formattedUrl}/latest`,
-          isNew: true,
-        },
-      ],
-    }
-
-    setBookmarks([...bookmarks, bookmarkToAdd])
+    addBookmark(newBookmarkUrl)
     setNewBookmarkUrl("")
+    setIsAddingBookmark(false)
+  }
+
+  // Handle clicking on content to mark as read
+  const handleContentClick = (siteId: number, contentId: number) => {
+    markAsRead(siteId, contentId)
   }
 
   return (
-    <div>
-      <div className="mb-8 space-y-4">
-        <div className="flex justify-between items-center">
-          <button onClick={updateBookmarks} className="text-sm flex items-center gap-1" disabled={isUpdating}>
-            {isUpdating ? "Refreshing ..." : "Refresh"}
-          </button>
+    <div className="bg-white border border-gray-100 shadow-lg">
+      <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+        <h2 className="text-xl font-medium">Your Bookmarks</h2>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleUpdateBookmarks}
+            disabled={isUpdating}
+            className="h-8 text-xs gap-1.5"
+          >
+            <RefreshCw className={cn("h-3 w-3", isUpdating && "animate-spin")} />
+            {isUpdating ? "Updating..." : "Update"}
+          </Button>
+          <Button size="sm" onClick={() => setIsAddingBookmark(true)} className="h-8 text-xs gap-1.5">
+            <PlusIcon className="h-3 w-3" />
+            Add Bookmark
+          </Button>
         </div>
-
-        <form onSubmit={addBookmark} className="flex gap-2 items-center border-b pb-4">
-          <Input
-            value={newBookmarkUrl}
-            onChange={(e) => setNewBookmarkUrl(e.target.value)}
-            placeholder="Add new bookmark (enter URL)"
-            className="flex-1"
-          />
-          <button type="submit" className="text-sm flex items-center gap-1">
-            <Bookmark className="h-3 w-3" />
-            Add
-          </button>
-        </form>
       </div>
 
-      <div className="space-y-12">
-        {sortedBookmarks.map((bookmark) => (
-          <BookmarkEntry key={bookmark.id} bookmark={bookmark} onRemove={() => removeBookmark(bookmark.id)} />
-        ))}
+      {isAddingBookmark && (
+        <div className="p-4 border-b border-gray-100 bg-gray-50">
+          <form onSubmit={handleAddBookmark} className="flex gap-3 items-center">
+            <Input
+              value={newBookmarkUrl}
+              onChange={(e) => setNewBookmarkUrl(e.target.value)}
+              placeholder="Enter website URL"
+              className="flex-1"
+              autoFocus
+            />
+            <Button type="submit" size="sm">
+              Add
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingBookmark(false)}>
+              Cancel
+            </Button>
+          </form>
+        </div>
+      )}
+
+      <div className="divide-y divide-gray-100">
+        {sortedBookmarks.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>No bookmarks yet. Add your first bookmark to get started.</p>
+          </div>
+        ) : (
+          sortedBookmarks.map((bookmark) => (
+            <BookmarkEntry
+              key={bookmark.id}
+              bookmark={bookmark}
+              onRemove={() => removeBookmark(bookmark.id)}
+              onContentClick={handleContentClick}
+            />
+          ))
+        )}
       </div>
     </div>
   )
 }
 
-interface BookmarkedSite {
-  id: number
-  name: string
-  url: string
-  description: string
-  bookmarked: boolean
-  lastUpdated: Date
-  latestContent: {
-    id: number
-    title: string
-    summary: string
-    publishedAt: Date
-    url: string
-    isNew: boolean
-  }[]
-}
-
 interface BookmarkEntryProps {
-  bookmark: BookmarkedSite
+  bookmark: ReturnType<typeof useBookmarkStore>["bookmarks"][0]
   onRemove: () => void
+  onContentClick: (siteId: number, contentId: number) => void
 }
 
-function BookmarkEntry({ bookmark, onRemove }: BookmarkEntryProps) {
+function BookmarkEntry({ bookmark, onRemove, onContentClick }: BookmarkEntryProps) {
   return (
-    <div className="group">
-      <div className="mb-1 flex items-baseline">
-        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="text-2xl hover:text-gray-600">
+    <div className="p-6 hover:bg-gray-50 transition-colors">
+      <div className="mb-3 flex items-center justify-between">
+        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
           {bookmark.name}
         </a>
-        <span className="text-xs text-gray-500 ml-2">{format(bookmark.lastUpdated, "MM/dd/yy")}</span>
-        <button onClick={onRemove} className="ml-2 text-xs text-gray-400 hover:text-gray-900">
-          remove
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500">{format(new Date(bookmark.lastUpdated), "MM/dd/yyyy")}</span>
+          <Button variant="ghost" size="sm" onClick={onRemove} className="h-6 text-xs text-gray-500 hover:text-black">
+            Remove
+          </Button>
+        </div>
       </div>
 
       {bookmark.latestContent.length > 0 && (
@@ -272,12 +138,15 @@ function BookmarkEntry({ bookmark, onRemove }: BookmarkEntryProps) {
               href={bookmark.latestContent[0].url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-gray-700 hover:text-black"
+              onClick={() => onContentClick(bookmark.id, bookmark.latestContent[0].id)}
+              className={`text-sm hover:underline ${bookmark.latestContent[0].isRead ? "text-gray-500" : "text-black"}`}
             >
               {bookmark.latestContent[0].title}
             </a>
             {bookmark.latestContent[0].isNew && (
-              <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">new</span>
+              <span className="text-xs bg-gradient-to-r from-orange-500 to-red-500 text-white px-1.5 py-0.5 font-medium">
+                New
+              </span>
             )}
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
