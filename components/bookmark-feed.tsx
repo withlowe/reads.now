@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { PlusIcon, RefreshCw } from "lucide-react"
+import { PlusIcon, RefreshCw, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -79,32 +79,29 @@ export function BookmarkFeed() {
 
       {isAddingBookmark && (
         <div className="p-3 sm:p-4 border-b border-gray-100 bg-gray-50">
-          <form onSubmit={handleAddBookmark} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-            <Input
-              value={newBookmarkUrl}
-              onChange={(e) => setNewBookmarkUrl(e.target.value)}
-              placeholder="Enter website URL"
-              className="flex-1 text-sm h-9"
-              autoFocus
-            />
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button
-                type="submit"
-                size="sm"
-                className="h-9 text-sm flex-1 sm:flex-initial bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90"
-              >
-                Add
-              </Button>
+          <form onSubmit={handleAddBookmark} className="flex flex-col gap-2">
+            <div className="flex items-center">
+              <Input
+                value={newBookmarkUrl}
+                onChange={(e) => setNewBookmarkUrl(e.target.value)}
+                placeholder="Enter website URL"
+                className="flex-1 text-sm h-9"
+                autoFocus
+              />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsAddingBookmark(false)}
-                className="h-9 text-sm flex-1 sm:flex-initial"
+                className="ml-1 h-9 w-9 p-0 flex-none"
               >
-                Cancel
+                <X className="h-4 w-4" />
+                <span className="sr-only">Cancel</span>
               </Button>
             </div>
+            <Button type="submit" size="sm" className="h-9 text-sm bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90">
+              Add Bookmark
+            </Button>
           </form>
         </div>
       )}

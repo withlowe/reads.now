@@ -32,6 +32,20 @@ interface BookmarkState {
 // Helper function to convert Date objects to ISO strings
 const dateToString = (date: Date): string => date.toISOString()
 
+// Sample content titles for updates
+const contentTitles = [
+  "Latest Updates and News",
+  "What's New This Week",
+  "Recent Developments",
+  "Top Stories Today",
+  "Featured Content",
+  "Must-Read Article",
+  "Trending Now",
+  "Editor's Pick",
+  "Highlights",
+  "Important Announcement",
+]
+
 // Initial mock data with string dates instead of Date objects
 const initialBookmarks: BookmarkedSite[] = [
   {
@@ -193,16 +207,19 @@ export const useBookmarkStore = create<BookmarkState>()(
           const updatedBookmarks = state.bookmarks.map((bookmark) => {
             // Randomly update some bookmarks (for demo purposes)
             if (bookmark.bookmarked && Math.random() > 0.5) {
+              // Get a random title from our content titles array
+              const randomTitle = contentTitles[Math.floor(Math.random() * contentTitles.length)]
+
               return {
                 ...bookmark,
                 lastUpdated: new Date().toISOString(),
                 latestContent: [
                   {
                     id: Math.floor(Math.random() * 10000),
-                    title: `New: ${bookmark.name} Update ${new Date().toLocaleTimeString()}`,
+                    title: randomTitle,
                     summary: `Fresh content from ${bookmark.name} that was just published. This article covers the latest developments and provides insights into recent trends.`,
                     publishedAt: new Date().toISOString(),
-                    url: `${bookmark.url}/new-content-${Date.now()}`,
+                    url: `${bookmark.url}/content-${Date.now()}`,
                     isNew: true,
                     isRead: false,
                   },

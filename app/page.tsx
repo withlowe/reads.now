@@ -12,7 +12,7 @@ export default function Home() {
             Reader provides the tools to collect, organize, and stay updated with content from your favorite websites.
           </p>
         </div>
-        <div className="w-full px-2 sm:px-4 pb-12 sm:pb-16">
+        <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 pb-12 sm:pb-16">
           <BookmarkFeed />
         </div>
       </div>
