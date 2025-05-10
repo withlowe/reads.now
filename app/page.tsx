@@ -19,13 +19,11 @@ export default function Home() {
 
         {!compactMode && (
           <div className="w-full px-3 sm:px-4 py-12 sm:py-16 text-center">
-            <h1 className="text-4xl sm:text-5xl font-medium tracking-tight mb-4">Your bookmarks, Always updated.</h1>
-            <p className="text-lg sm:text-xl text-gray-600 mb-4 max-w-3xl mx-auto leading-relaxed">
-              Collect, organize, and stay updated with your bookmarks.
-            </p>
+            <h1 className="mb-4">Your bookmarks, Always updated.</h1>
+            <p className="subtitle max-w-3xl mx-auto mb-4">Collect, organize, and stay updated with your bookmarks.</p>
             <button
               onClick={() => setCompactMode(true)}
-              className="inline-flex items-center text-sm text-gray-500 hover:text-black transition-colors gap-1"
+              className="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors gap-1"
             >
               <span>reads.now</span>
               <ArrowDown className="h-3 w-3" />

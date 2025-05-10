@@ -20,8 +20,7 @@ const config = {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
+        sans: ["var(--font-inter)", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -75,17 +74,10 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "pulse-fade": {
-          "0%": { opacity: "0" },
-          "10%": { opacity: "1" },
-          "70%": { opacity: "0.9" },
-          "100%": { opacity: "0", transform: "scale(0.95) translateY(-10px)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-fade": "pulse-fade 1.5s ease-out forwards",
       },
     },
   },

@@ -195,14 +195,14 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
       {/* Search bar above the feed */}
       <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
-      <div className="bg-white border border-gray-100 shadow-lg w-full">
-        <div className="p-3 sm:p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-lg w-full transition-colors duration-300">
+        <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-colors duration-300">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-medium tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
               {searchQuery ? `Search: "${searchQuery}"` : "Bookmarks"}
             </h2>
             <button
-              className="p-1.5 text-gray-500 hover:text-[#00FF9D] transition-colors"
+              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-[#00FF9D] dark:hover:text-[#00FF9D] transition-colors duration-300"
               title="Import bookmarks"
               onClick={() => setImportDialogOpen(true)}
             >
@@ -210,7 +210,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
               <span className="sr-only">Import</span>
             </button>
             <button
-              className="p-1.5 text-gray-500 hover:text-[#00FF9D] transition-colors"
+              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-[#00FF9D] dark:hover:text-[#00FF9D] transition-colors duration-300"
               title="Export bookmarks"
               onClick={() => setExportDialogOpen(true)}
             >
@@ -221,7 +221,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
 
             {compactMode && (
               <button
-                className="p-1.5 text-gray-500 hover:text-[#00FF9D] transition-colors ml-2"
+                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-[#00FF9D] dark:hover:text-[#00FF9D] transition-colors duration-300 ml-2"
                 title="Show header"
                 onClick={() => setCompactMode(false)}
               >
@@ -236,7 +236,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
               size="sm"
               onClick={handleUpdateBookmarks}
               disabled={isUpdating}
-              className="h-9 text-sm gap-1.5 flex-1 sm:flex-initial"
+              className="h-9 text-sm gap-1.5 flex-1 sm:flex-initial transition-colors duration-300"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isUpdating && "animate-spin")} />
               {isUpdating ? "Checking sites..." : "Check for updates"}
@@ -244,7 +244,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
             <Button
               size="sm"
               onClick={() => setIsAddingBookmark(true)}
-              className="h-9 text-sm gap-1.5 flex-1 sm:flex-initial bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90"
+              className="h-9 text-sm gap-1.5 flex-1 sm:flex-initial bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90 transition-colors duration-300"
             >
               <PlusIcon className="h-3.5 w-3.5" />
               Add Bookmark
@@ -256,10 +256,10 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
         {statusMessage.type && (
           <div
             className={cn(
-              "px-4 py-2 text-sm text-center",
-              statusMessage.type === "success" && "bg-green-50 text-green-700",
-              statusMessage.type === "error" && "bg-red-50 text-red-700",
-              statusMessage.type === "info" && "bg-blue-50 text-blue-700",
+              "px-4 py-2 text-sm text-center transition-colors duration-300",
+              statusMessage.type === "success" && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400",
+              statusMessage.type === "error" && "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400",
+              statusMessage.type === "info" && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400",
             )}
           >
             {statusMessage.text}
@@ -267,14 +267,14 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
         )}
 
         {isAddingBookmark && (
-          <div className="p-3 sm:p-4 border-b border-gray-100 bg-gray-50">
+          <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 transition-colors duration-300">
             <form onSubmit={handleAddBookmark} className="flex flex-col gap-2">
               <div className="flex items-center">
                 <Input
                   value={newBookmarkUrl}
                   onChange={(e) => setNewBookmarkUrl(e.target.value)}
                   placeholder="Enter website URL"
-                  className="flex-1 text-sm h-9"
+                  className="flex-1 text-sm h-9 transition-colors duration-300"
                   autoFocus
                   disabled={isAddingBookmarkLoading}
                 />
@@ -283,7 +283,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
                 <Button
                   type="submit"
                   size="sm"
-                  className="h-9 text-sm bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90"
+                  className="h-9 text-sm bg-[#00FF9D] text-black hover:bg-[#00FF9D]/90 transition-colors duration-300"
                   disabled={isAddingBookmarkLoading}
                 >
                   {isAddingBookmarkLoading ? "Adding..." : "Add Bookmark"}
@@ -293,7 +293,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsAddingBookmark(false)}
-                  className="h-9 text-sm"
+                  className="h-9 text-sm transition-colors duration-300"
                   disabled={isAddingBookmarkLoading}
                 >
                   Cancel
@@ -303,9 +303,9 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
           </div>
         )}
 
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100 dark:divide-gray-800 transition-colors duration-300">
           {sortedBookmarks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400 transition-colors duration-300">
               {searchQuery ? (
                 <p className="text-base">No bookmarks match your search query.</p>
               ) : (
@@ -327,7 +327,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
 
         {/* Import Dialog */}
         <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] transition-colors duration-300">
             <DialogHeader>
               <DialogTitle>Import Bookmarks</DialogTitle>
               <DialogDescription>Upload a JSON file containing your bookmarks.</DialogDescription>
@@ -335,20 +335,22 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
 
             <div className="py-4">
               {importStatus === "idle" ? (
-                <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-lg p-6">
-                  <p className="mb-4 text-sm text-gray-500">Select a JSON file to import</p>
-                  <label className="cursor-pointer bg-[#00FF9D] text-black px-4 py-2 rounded hover:bg-[#00FF9D]/90 transition-colors">
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-6 transition-colors duration-300">
+                  <p className="mb-4 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                    Select a JSON file to import
+                  </p>
+                  <label className="cursor-pointer bg-[#00FF9D] text-black px-4 py-2 rounded hover:bg-[#00FF9D]/90 transition-colors duration-300">
                     Choose File
                     <input type="file" accept=".json" className="hidden" onChange={handleImport} />
                   </label>
                 </div>
               ) : importStatus === "success" ? (
-                <div className="flex items-center justify-center p-6 text-green-600">
+                <div className="flex items-center justify-center p-6 text-green-600 dark:text-green-400 transition-colors duration-300">
                   <Check className="mr-2 h-5 w-5" />
                   <p>Bookmarks imported successfully!</p>
                 </div>
               ) : (
-                <div className="flex items-center justify-center p-6 text-red-600">
+                <div className="flex items-center justify-center p-6 text-red-600 dark:text-red-400 transition-colors duration-300">
                   <AlertCircle className="mr-2 h-5 w-5" />
                   <p>Error importing bookmarks. Please try again.</p>
                 </div>
@@ -359,7 +361,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
 
         {/* Export Dialog */}
         <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] transition-colors duration-300">
             <DialogHeader>
               <DialogTitle>Export Bookmarks</DialogTitle>
               <DialogDescription>Download your bookmarks as a JSON file.</DialogDescription>
@@ -367,24 +369,24 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
 
             <div className="py-4">
               {exportStatus === "idle" ? (
-                <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-lg p-6">
-                  <p className="mb-4 text-sm text-gray-500">
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-6 transition-colors duration-300">
+                  <p className="mb-4 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                     This will download a JSON file containing all your bookmarks.
                   </p>
                   <button
                     onClick={handleExport}
-                    className="cursor-pointer bg-[#00FF9D] text-black px-4 py-2 rounded hover:bg-[#00FF9D]/90 transition-colors"
+                    className="cursor-pointer bg-[#00FF9D] text-black px-4 py-2 rounded hover:bg-[#00FF9D]/90 transition-colors duration-300"
                   >
                     Export Bookmarks
                   </button>
                 </div>
               ) : exportStatus === "success" ? (
-                <div className="flex items-center justify-center p-6 text-green-600">
+                <div className="flex items-center justify-center p-6 text-green-600 dark:text-green-400 transition-colors duration-300">
                   <Check className="mr-2 h-5 w-5" />
                   <p>Bookmarks exported successfully!</p>
                 </div>
               ) : (
-                <div className="flex items-center justify-center p-6 text-red-600">
+                <div className="flex items-center justify-center p-6 text-red-600 dark:text-red-400 transition-colors duration-300">
                   <AlertCircle className="mr-2 h-5 w-5" />
                   <p>Error importing bookmarks. Please try again.</p>
                 </div>
@@ -420,7 +422,10 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
     if (!searchQuery.trim()) return text
 
     const regex = new RegExp(`(${searchQuery.trim()})`, "gi")
-    return text.replace(regex, '<mark class="bg-yellow-100 px-0.5">$1</mark>')
+    return text.replace(
+      regex,
+      '<mark class="bg-yellow-100 dark:bg-yellow-900/50 px-0.5 transition-colors duration-300">$1</mark>',
+    )
   }
 
   // Get the latest content
@@ -448,7 +453,7 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
 
   return (
     <div
-      className="p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer bookmark-entry-container"
+      className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-300 cursor-pointer bookmark-entry-container"
       onClick={handleEntryClick}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
@@ -457,7 +462,7 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-lg sm:text-xl font-medium tracking-tight hover:text-[#00FF9D] transition-colors"
+            className="text-lg sm:text-xl font-medium tracking-tight hover:text-[#00FF9D] transition-colors duration-300"
             dangerouslySetInnerHTML={{
               __html: searchQuery ? highlightSearchTerm(bookmark.name) : bookmark.name,
             }}
@@ -469,13 +474,15 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
           {isNew && <span className="text-xs bg-[#00FF9D] text-black px-1.5 py-0.5 font-medium">New</span>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs text-gray-500 font-mono">{formatDate(bookmark.lastUpdated)}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono transition-colors duration-300">
+            {formatDate(bookmark.lastUpdated)}
+          </span>
           <button
             onClick={(e) => {
               e.stopPropagation()
               onRemove()
             }}
-            className="text-xs text-gray-500 hover:text-black font-mono"
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-mono transition-colors duration-300"
           >
             Remove
           </button>
@@ -484,7 +491,7 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
 
       {latestContent && (
         <div
-          className="text-base sm:text-base font-medium text-gray-500 hover:text-black cursor-pointer transition-colors"
+          className="text-base sm:text-base font-medium text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors duration-300"
           dangerouslySetInnerHTML={{
             __html: searchQuery ? highlightSearchTerm(latestContent.title) : latestContent.title,
           }}
