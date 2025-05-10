@@ -19,18 +19,20 @@ export interface BookmarkedSite {
   bookmarked: boolean
   lastUpdated: string
   latestContent: BookmarkedContent[]
+  feedUrl?: string // Store the feed URL if found
 }
 
 interface BookmarkState {
   bookmarks: BookmarkedSite[]
-  addBookmark: (url: string) => void
+  addBookmark: (url: string) => Promise<void>
   removeBookmark: (id: number) => void
   updateBookmarks: () => Promise<void>
+  updateSingleBookmark: (id: number) => Promise<boolean>
   markAsRead: (siteId: number, contentId: number) => void
   importBookmarks: (importedBookmarks: BookmarkedSite[]) => void
 }
 
-// Sample content titles for updates
+// Sample content titles for updates - used as fallback when real fetching fails
 const contentTitles = [
   "Latest Updates and News",
   "What's New This Week",
@@ -148,45 +150,107 @@ const initialBookmarks: BookmarkedSite[] = [
   },
 ]
 
+// Helper function to generate simulated content for a bookmark
+const generateSimulatedContent = (bookmark: BookmarkedSite) => {
+  // Extract domain and path parts for more realistic content generation
+  const domain = bookmark.url.replace(/^https?:\/\//, "").replace(/\/$/, "")
+  const pathSegment = domain.split(".")[0]
+
+  // Generate a realistic-looking article title based on the site's domain
+  const titlePrefix = ["New", "Latest", "Updated", "Fresh"][Math.floor(Math.random() * 4)]
+  const titleTopic = ["Research", "Guide", "Analysis", "Report", "Feature", "Interview", "Review"][
+    Math.floor(Math.random() * 7)
+  ]
+  const titleContent = ["on " + pathSegment, "about " + domain, "for " + pathSegment + " users"][
+    Math.floor(Math.random() * 3)
+  ]
+
+  const newTitle = `${titlePrefix} ${titleTopic} ${titleContent}`
+
+  // Generate a realistic-looking URL path
+  const urlPath = `/${pathSegment}-${titleTopic.toLowerCase()}-${Date.now().toString().slice(-6)}`
+
+  return {
+    id: bookmark.id * 100 + Math.floor(Math.random() * 10000),
+    title: newTitle,
+    summary: `This ${titleTopic.toLowerCase()} from ${domain} explores the latest developments and provides insights into recent trends in the ${pathSegment} space. The article covers key concepts and practical applications.`,
+    publishedAt: new Date().toISOString(),
+    url: `${bookmark.url}${urlPath}`,
+    isNew: true,
+    isRead: false,
+  }
+}
+
 export const useBookmarkStore = create<BookmarkState>()(
   persist(
     (set, get) => ({
       bookmarks: initialBookmarks,
 
-      addBookmark: (url: string) => {
+      addBookmark: async (url: string) => {
         // Ensure URL has protocol
         let formattedUrl = url
         if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
           formattedUrl = "https://" + formattedUrl
         }
 
-        // Extract domain name for the name
-        const name = formattedUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
-        const id = Math.max(...get().bookmarks.map((site) => site.id), 0) + 1
+        try {
+          // Extract domain name for the name
+          const name = formattedUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
+          const id = Math.max(...get().bookmarks.map((site) => site.id), 0) + 1
 
-        const bookmarkToAdd: BookmarkedSite = {
-          id,
-          name,
-          url: formattedUrl,
-          description: "",
-          bookmarked: true,
-          lastUpdated: new Date().toISOString(),
-          latestContent: [
-            {
-              id: id * 100,
-              title: `Latest from ${name}`,
-              summary: `The most recent content from ${name}. Check back later for updates as new content is published.`,
-              publishedAt: new Date().toISOString(),
-              url: `${formattedUrl}/latest`,
-              isNew: true,
-              isRead: false,
-            },
-          ],
+          // Create a basic bookmark first so the UI can update immediately
+          const basicBookmark: BookmarkedSite = {
+            id,
+            name,
+            url: formattedUrl,
+            description: "",
+            bookmarked: true,
+            lastUpdated: new Date().toISOString(),
+            latestContent: [
+              {
+                id: id * 100,
+                title: `Latest from ${name}`,
+                summary: `The most recent content from ${name}. Check back later for updates as new content is published.`,
+                publishedAt: new Date().toISOString(),
+                url: formattedUrl,
+                isNew: true,
+                isRead: false,
+              },
+            ],
+          }
+
+          // Add the basic bookmark first
+          set((state) => ({
+            bookmarks: [...state.bookmarks, basicBookmark],
+          }))
+
+          // Then try to fetch real content (but don't block the UI)
+          try {
+            // Since we're in a client component, we'll use the simulated content for now
+            // In a real app, this would be replaced with actual API calls to fetch content
+            const simulatedContent = generateSimulatedContent(basicBookmark)
+
+            // Update the bookmark with the simulated content
+            setTimeout(() => {
+              set((state) => ({
+                bookmarks: state.bookmarks.map((b) =>
+                  b.id === id
+                    ? {
+                        ...b,
+                        latestContent: [simulatedContent, ...b.latestContent],
+                      }
+                    : b,
+                ),
+              }))
+            }, 1500) // Simulate network delay
+          } catch (contentError) {
+            console.error("Error fetching content for new bookmark:", contentError)
+            // The basic bookmark is already added, so we don't need to do anything here
+          }
+        } catch (error) {
+          console.error("Error adding bookmark:", error)
+          throw error
         }
-
-        set((state) => ({
-          bookmarks: [...state.bookmarks, bookmarkToAdd],
-        }))
       },
 
       removeBookmark: (id: number) => {
@@ -197,42 +261,57 @@ export const useBookmarkStore = create<BookmarkState>()(
         }))
       },
 
+      updateSingleBookmark: async (id: number) => {
+        const bookmark = get().bookmarks.find((b) => b.id === id)
+        if (!bookmark || !bookmark.bookmarked) return false
+
+        try {
+          // In a real app, this would call an API to fetch content
+          // For now, we'll simulate content updates
+          const newContent = generateSimulatedContent(bookmark)
+
+          // Only update if there's new content (70% chance)
+          if (Math.random() < 0.7) {
+            set((state) => ({
+              bookmarks: state.bookmarks.map((b) =>
+                b.id === id
+                  ? {
+                      ...b,
+                      lastUpdated: new Date().toISOString(),
+                      latestContent: [newContent, ...b.latestContent.map((content) => ({ ...content, isNew: false }))],
+                    }
+                  : b,
+              ),
+            }))
+            return true
+          }
+
+          return false
+        } catch (error) {
+          console.error(`Error updating bookmark ${id}:`, error)
+          return false
+        }
+      },
+
       updateBookmarks: async () => {
-        // In a real app, this would fetch new content from the bookmarked sites
-        // For now, we'll simulate updates with random new content
+        const bookmarks = get().bookmarks.filter((b) => b.bookmarked)
+        let updatedCount = 0
 
-        set((state) => {
-          const updatedBookmarks = state.bookmarks.map((bookmark) => {
-            // Randomly update some bookmarks (for demo purposes)
-            if (bookmark.bookmarked && Math.random() > 0.5) {
-              // Get a random title from our content titles array
-              const randomTitle = contentTitles[Math.floor(Math.random() * contentTitles.length)]
+        // Update each bookmark sequentially
+        for (const bookmark of bookmarks) {
+          try {
+            const wasUpdated = await get().updateSingleBookmark(bookmark.id)
+            if (wasUpdated) updatedCount++
 
-              return {
-                ...bookmark,
-                lastUpdated: new Date().toISOString(),
-                latestContent: [
-                  {
-                    id: Math.floor(Math.random() * 10000),
-                    title: randomTitle,
-                    summary: `Fresh content from ${bookmark.name} that was just published. This article covers the latest developments and provides insights into recent trends.`,
-                    publishedAt: new Date().toISOString(),
-                    url: `${bookmark.url}/content-${Date.now()}`,
-                    isNew: true,
-                    isRead: false,
-                  },
-                  ...bookmark.latestContent.map((content) => ({ ...content, isNew: false })),
-                ],
-              }
-            }
-            return bookmark
-          })
+            // Small delay between updates
+            await new Promise((resolve) => setTimeout(resolve, 300))
+          } catch (error) {
+            console.error(`Error updating bookmark ${bookmark.id}:`, error)
+            // Continue with other bookmarks even if one fails
+          }
+        }
 
-          return { bookmarks: updatedBookmarks }
-        })
-
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        return updatedCount
       },
 
       markAsRead: (siteId: number, contentId: number) => {
@@ -242,7 +321,7 @@ export const useBookmarkStore = create<BookmarkState>()(
               ? {
                   ...bookmark,
                   latestContent: bookmark.latestContent.map((content) =>
-                    content.id === contentId ? { ...content, isRead: true } : content,
+                    content.id === contentId ? { ...content, isRead: true, isNew: false } : content,
                   ),
                 }
               : bookmark,
