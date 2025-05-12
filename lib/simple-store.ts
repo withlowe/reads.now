@@ -20,6 +20,8 @@ export interface BookmarkedSite {
   description: string
   bookmarked: boolean
   lastUpdated: string
+  lastChecked?: string
+  contentHash?: string // Store content hash for comparison
   latestContent: BookmarkedContent[]
 }
 
@@ -75,20 +77,6 @@ const initialBookmarks: BookmarkedSite[] = [
   },
 ]
 
-// Sample content titles for updates
-const contentTitles = [
-  "Latest Updates and News",
-  "What's New This Week",
-  "Recent Developments",
-  "Top Stories Today",
-  "Featured Content",
-  "Must-Read Article",
-  "Trending Now",
-  "Editor's Pick",
-  "Highlights",
-  "Important Announcement",
-]
-
 export const useBookmarkStore = create<BookmarkState>()(
   persist(
     (set, get) => ({
@@ -113,6 +101,7 @@ export const useBookmarkStore = create<BookmarkState>()(
           description: "Added bookmark",
           bookmarked: true,
           lastUpdated: new Date().toISOString(),
+          lastChecked: new Date().toISOString(),
           latestContent: [
             {
               id: id * 100,
@@ -130,6 +119,22 @@ export const useBookmarkStore = create<BookmarkState>()(
         set((state) => ({
           bookmarks: [...state.bookmarks, newBookmark],
         }))
+
+        // Optionally, fetch initial content hash in the background
+        fetch("/api/check-updates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: formattedUrl }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.contentHash) {
+              set((state) => ({
+                bookmarks: state.bookmarks.map((b) => (b.id === id ? { ...b, contentHash: data.contentHash } : b)),
+              }))
+            }
+          })
+          .catch((error) => console.error("Error fetching initial content:", error))
       },
 
       removeBookmark: (id: number) => {
@@ -158,40 +163,55 @@ export const useBookmarkStore = create<BookmarkState>()(
       checkForUpdates: async () => {
         // Get active bookmarks
         const activeBookmarks = get().bookmarks.filter((b) => b.bookmarked)
-
-        // Simulate a delay for the update check
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Randomly select some bookmarks to update (for demo purposes)
         let updatedCount = 0
         const updatedBookmarks = [...get().bookmarks]
+        const now = new Date()
 
+        // Check each bookmark for updates
         for (const bookmark of activeBookmarks) {
-          // Randomly decide if this bookmark has an update (50% chance)
-          const hasUpdate = Math.random() > 0.5
-
-          if (hasUpdate) {
-            updatedCount++
-
-            // Generate a random title from the sample titles
-            const randomTitleIndex = Math.floor(Math.random() * contentTitles.length)
-            const newTitle = contentTitles[randomTitleIndex]
-
-            // Create a new content item
-            const newContent = {
-              id: bookmark.id * 100 + Math.floor(Math.random() * 1000),
-              title: newTitle,
-              summary:
-                "New content found on " + bookmark.name + ". This update was discovered during the latest check.",
-              publishedAt: new Date().toISOString(),
-              url: bookmark.url + "/new-content-" + Date.now(),
-              isNew: true,
-              isRead: false,
-            }
-
+          try {
             // Find the bookmark in our array
             const bookmarkIndex = updatedBookmarks.findIndex((b) => b.id === bookmark.id)
-            if (bookmarkIndex !== -1) {
+            if (bookmarkIndex === -1) continue
+
+            // Update the lastChecked timestamp
+            updatedBookmarks[bookmarkIndex] = {
+              ...updatedBookmarks[bookmarkIndex],
+              lastChecked: now.toISOString(),
+            }
+
+            // Call our API to check for updates
+            const response = await fetch("/api/check-updates", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                url: bookmark.url,
+                lastContentHash: bookmark.contentHash,
+              }),
+            })
+
+            if (!response.ok) {
+              console.error(`Error checking ${bookmark.name}:`, await response.text())
+              continue
+            }
+
+            const data = await response.json()
+
+            // If content has changed
+            if (data.hasChanged) {
+              updatedCount++
+
+              // Create a new content item
+              const newContent = {
+                id: bookmark.id * 100 + Math.floor(now.getTime() % 10000),
+                title: data.title || `New content on ${bookmark.name}`,
+                summary: data.summary || `There appears to be new content on ${bookmark.name}.`,
+                publishedAt: now.toISOString(),
+                url: bookmark.url,
+                isNew: true,
+                isRead: false,
+              }
+
               // Mark existing content as not new
               const updatedContent = updatedBookmarks[bookmarkIndex].latestContent.map((content) => ({
                 ...content,
@@ -201,10 +221,16 @@ export const useBookmarkStore = create<BookmarkState>()(
               // Update the bookmark
               updatedBookmarks[bookmarkIndex] = {
                 ...updatedBookmarks[bookmarkIndex],
-                lastUpdated: new Date().toISOString(),
+                lastUpdated: now.toISOString(),
+                contentHash: data.contentHash,
                 latestContent: [newContent, ...updatedContent],
               }
             }
+
+            // Add a small delay between requests to avoid overwhelming servers
+            await new Promise((resolve) => setTimeout(resolve, 500))
+          } catch (error) {
+            console.error(`Error checking ${bookmark.name}:`, error)
           }
         }
 
