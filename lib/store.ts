@@ -1,5 +1,8 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
+import { parseFeed, discoverFeeds } from "@/lib/feed-parser"
+import { JSDOM } from "jsdom"
+import crypto from "crypto"
 
 export interface BookmarkedContent {
   id: number
@@ -20,13 +23,18 @@ export interface BookmarkedSite {
   lastUpdated: string
   latestContent: BookmarkedContent[]
   feedUrl?: string // Store the feed URL if found
+  etag?: string // Store ETag for HTTP caching
+  lastModified?: string // Store Last-Modified header
+  contentHash?: string // Store content hash for comparison
+  lastCheckedSelector?: string // Store selector used for specific content checking
+  lastCheckedContent?: string // Store the content of the selector for comparison
 }
 
 interface BookmarkState {
   bookmarks: BookmarkedSite[]
   addBookmark: (url: string) => Promise<void>
   removeBookmark: (id: number) => void
-  updateBookmarks: () => Promise<void>
+  updateBookmarks: () => Promise<number>
   updateSingleBookmark: (id: number) => Promise<boolean>
   markAsRead: (siteId: number, contentId: number) => void
   importBookmarks: (importedBookmarks: BookmarkedSite[]) => void
@@ -150,32 +158,128 @@ const initialBookmarks: BookmarkedSite[] = [
   },
 ]
 
+// Helper function to check for updates using HTTP headers
+async function checkForUpdatesWithHeaders(url: string, lastEtag?: string, lastModified?: string) {
+  try {
+    const headers: HeadersInit = {}
+
+    if (lastEtag) {
+      headers["If-None-Match"] = lastEtag
+    }
+
+    if (lastModified) {
+      headers["If-Modified-Since"] = lastModified
+    }
+
+    const response = await fetch(url, {
+      headers,
+      method: "HEAD",
+      // Add a cache-busting parameter to avoid browser caching
+      cache: "no-store",
+    })
+
+    if (response.status === 304) {
+      console.log("Content has not changed (304 Not Modified)")
+      return { changed: false }
+    } else {
+      console.log("Content may have changed (status: " + response.status + ")")
+      // Store new ETag and Last-Modified for future checks
+      const newEtag = response.headers.get("ETag")
+      const newModified = response.headers.get("Last-Modified")
+      return {
+        changed: true,
+        etag: newEtag || undefined,
+        lastModified: newModified || undefined,
+      }
+    }
+  } catch (error) {
+    console.error("Error checking headers:", error)
+    // If there's an error, we'll fall back to other methods
+    return { changed: true }
+  }
+}
+
+// Helper function to check content hash
+async function checkContentHash(url: string, previousHash?: string) {
+  try {
+    const response = await fetch(url, { cache: "no-store" })
+    const content = await response.text()
+
+    // Create a hash of the content
+    const hash = crypto.createHash("md5").update(content).digest("hex")
+
+    if (hash === previousHash) {
+      console.log("Content hash has not changed")
+      return { changed: false, newHash: hash }
+    } else {
+      console.log("Content hash has changed")
+      return { changed: true, newHash: hash }
+    }
+  } catch (error) {
+    console.error("Error checking content hash:", error)
+    return { changed: true }
+  }
+}
+
+// Helper function to check specific content
+async function checkSpecificContent(
+  url: string,
+  selector = "main, article, .content, #content",
+  previousContent?: string,
+) {
+  try {
+    const response = await fetch(url, { cache: "no-store" })
+    const html = await response.text()
+
+    const dom = new JSDOM(html)
+    const element = dom.window.document.querySelector(selector)
+    const content = element ? element.textContent?.trim() : ""
+
+    return {
+      changed: content !== previousContent,
+      newContent: content,
+      selector,
+    }
+  } catch (error) {
+    console.error("Error checking specific content:", error)
+    return { changed: true, selector }
+  }
+}
+
 // Helper function to generate simulated content for a bookmark
 const generateSimulatedContent = (bookmark: BookmarkedSite) => {
   // Extract domain and path parts for more realistic content generation
-  const domain = bookmark.url.replace(/^https?:\/\//, "").replace(/\/$/, "")
+  const domain = bookmark.url.replace(/^https?:\/\//, "").replace(/\/$/g, "")
   const pathSegment = domain.split(".")[0]
 
   // Generate a realistic-looking article title based on the site's domain
-  const titlePrefix = ["New", "Latest", "Updated", "Fresh"][Math.floor(Math.random() * 4)]
-  const titleTopic = ["Research", "Guide", "Analysis", "Report", "Feature", "Interview", "Review"][
-    Math.floor(Math.random() * 7)
-  ]
-  const titleContent = ["on " + pathSegment, "about " + domain, "for " + pathSegment + " users"][
-    Math.floor(Math.random() * 3)
-  ]
+  const titleOptions = ["New", "Latest", "Updated", "Fresh"]
+  const titlePrefix = titleOptions[Math.floor(Math.random() * titleOptions.length)]
 
-  const newTitle = `${titlePrefix} ${titleTopic} ${titleContent}`
+  const topicOptions = ["Research", "Guide", "Analysis", "Report", "Feature", "Interview", "Review"]
+  const titleTopic = topicOptions[Math.floor(Math.random() * topicOptions.length)]
+
+  const contentOptions = ["on " + pathSegment, "about " + domain, "for " + pathSegment + " users"]
+  const titleContent = contentOptions[Math.floor(Math.random() * contentOptions.length)]
+
+  const newTitle = titlePrefix + " " + titleTopic + " " + titleContent
 
   // Generate a realistic-looking URL path
-  const urlPath = `/${pathSegment}-${titleTopic.toLowerCase()}-${Date.now().toString().slice(-6)}`
+  const urlPath = "/" + pathSegment + "-" + titleTopic.toLowerCase() + "-" + Date.now().toString().slice(-6)
 
   return {
     id: bookmark.id * 100 + Math.floor(Math.random() * 10000),
     title: newTitle,
-    summary: `This ${titleTopic.toLowerCase()} from ${domain} explores the latest developments and provides insights into recent trends in the ${pathSegment} space. The article covers key concepts and practical applications.`,
+    summary:
+      "This " +
+      titleTopic.toLowerCase() +
+      " from " +
+      domain +
+      " explores the latest developments and provides insights into recent trends in the " +
+      pathSegment +
+      " space. The article covers key concepts and practical applications.",
     publishedAt: new Date().toISOString(),
-    url: `${bookmark.url}${urlPath}`,
+    url: bookmark.url + urlPath,
     isNew: true,
     isRead: false,
   }
@@ -226,23 +330,48 @@ export const useBookmarkStore = create<BookmarkState>()(
 
           // Then try to fetch real content (but don't block the UI)
           try {
-            // Since we're in a client component, we'll use the simulated content for now
-            // In a real app, this would be replaced with actual API calls to fetch content
-            const simulatedContent = generateSimulatedContent(basicBookmark)
+            // Try to discover feeds for this site
+            const feedUrls = await discoverFeeds(formattedUrl)
+            let updatedBookmark = { ...basicBookmark }
 
-            // Update the bookmark with the simulated content
-            setTimeout(() => {
-              set((state) => ({
-                bookmarks: state.bookmarks.map((b) =>
-                  b.id === id
-                    ? {
-                        ...b,
-                        latestContent: [simulatedContent, ...b.latestContent],
-                      }
-                    : b,
-                ),
-              }))
-            }, 1500) // Simulate network delay
+            if (feedUrls.length > 0) {
+              // Use the first feed found
+              const feedData = await parseFeed(feedUrls[0])
+
+              if (feedData && feedData.items.length > 0) {
+                // Update the bookmark with feed data
+                updatedBookmark = {
+                  ...updatedBookmark,
+                  feedUrl: feedUrls[0],
+                  description: feedData.description || updatedBookmark.description,
+                  latestContent: feedData.items.slice(0, 5).map((item, index) => ({
+                    id: id * 100 + index,
+                    title: item.title,
+                    summary: item.description,
+                    publishedAt: item.pubDate,
+                    url: item.link,
+                    isNew: true,
+                    isRead: false,
+                  })),
+                }
+              }
+            } else {
+              // If no feed found, try to get content hash and specific content
+              const hashResult = await checkContentHash(formattedUrl)
+              const contentResult = await checkSpecificContent(formattedUrl)
+
+              updatedBookmark = {
+                ...updatedBookmark,
+                contentHash: hashResult.newHash,
+                lastCheckedSelector: contentResult.selector,
+                lastCheckedContent: contentResult.newContent,
+              }
+            }
+
+            // Update the bookmark with the fetched data
+            set((state) => ({
+              bookmarks: state.bookmarks.map((b) => (b.id === id ? updatedBookmark : b)),
+            }))
           } catch (contentError) {
             console.error("Error fetching content for new bookmark:", contentError)
             // The basic bookmark is already added, so we don't need to do anything here
@@ -266,22 +395,226 @@ export const useBookmarkStore = create<BookmarkState>()(
         if (!bookmark || !bookmark.bookmarked) return false
 
         try {
-          // In a real app, this would call an API to fetch content
-          // For now, we'll simulate content updates
-          const newContent = generateSimulatedContent(bookmark)
+          let hasUpdates = false
+          let updatedBookmark = { ...bookmark }
 
-          // Only update if there's new content (70% chance)
-          if (Math.random() < 0.7) {
-            set((state) => ({
-              bookmarks: state.bookmarks.map((b) =>
-                b.id === id
-                  ? {
-                      ...b,
+          // Step 1: Check if the site has a feed URL
+          if (bookmark.feedUrl) {
+            try {
+              const feedData = await parseFeed(bookmark.feedUrl)
+
+              if (feedData && feedData.items.length > 0) {
+                // Check if the latest item is newer than our latest content
+                const latestFeedDate = new Date(feedData.items[0].pubDate)
+                const latestStoredDate =
+                  bookmark.latestContent.length > 0 ? new Date(bookmark.latestContent[0].publishedAt) : new Date(0)
+
+                if (latestFeedDate > latestStoredDate) {
+                  hasUpdates = true
+
+                  // Add new content items
+                  const newContentItems = feedData.items
+                    .filter((item) => new Date(item.pubDate) > latestStoredDate)
+                    .map((item) => ({
+                      id: bookmark.id * 100 + Math.floor(Math.random() * 10000),
+                      title: item.title,
+                      summary: item.description,
+                      publishedAt: item.pubDate,
+                      url: item.link,
+                      isNew: true,
+                      isRead: false,
+                    }))
+
+                  updatedBookmark = {
+                    ...updatedBookmark,
+                    lastUpdated: new Date().toISOString(),
+                    latestContent: [...newContentItems, ...bookmark.latestContent],
+                  }
+                }
+              }
+            } catch (feedError) {
+              console.error(`Error checking feed for ${bookmark.name}:`, feedError)
+              // If feed checking fails, fall back to other methods
+            }
+          }
+
+          // Step 2: If no updates from feed or no feed exists, check HTTP headers
+          if (!hasUpdates) {
+            try {
+              const headerResult = await checkForUpdatesWithHeaders(bookmark.url, bookmark.etag, bookmark.lastModified)
+
+              if (headerResult.changed) {
+                // Headers indicate content has changed
+                hasUpdates = true
+                updatedBookmark = {
+                  ...updatedBookmark,
+                  etag: headerResult.etag,
+                  lastModified: headerResult.lastModified,
+                }
+              } else {
+                // No changes according to headers, we can stop here
+                return false
+              }
+            } catch (headerError) {
+              console.error(`Error checking headers for ${bookmark.name}:`, headerError)
+              // Continue to other methods if header check fails
+            }
+          }
+
+          // Step 3: If still no updates or headers didn't provide conclusive results, check content hash
+          if (!hasUpdates) {
+            try {
+              const hashResult = await checkContentHash(bookmark.url, bookmark.contentHash)
+
+              if (hashResult.changed) {
+                hasUpdates = true
+                updatedBookmark = {
+                  ...updatedBookmark,
+                  contentHash: hashResult.newHash,
+                }
+              } else {
+                // No changes according to content hash
+                return false
+              }
+            } catch (hashError) {
+              console.error(`Error checking content hash for ${bookmark.name}:`, hashError)
+              // Continue to the next method
+            }
+          }
+
+          // Step 4: If still no updates or previous methods failed, check specific content
+          if (!hasUpdates) {
+            try {
+              const contentResult = await checkSpecificContent(
+                bookmark.url,
+                bookmark.lastCheckedSelector,
+                bookmark.lastCheckedContent,
+              )
+
+              if (contentResult.changed) {
+                hasUpdates = true
+                updatedBookmark = {
+                  ...updatedBookmark,
+                  lastCheckedSelector: contentResult.selector,
+                  lastCheckedContent: contentResult.newContent,
+                }
+              } else {
+                // No changes according to specific content check
+                return false
+              }
+            } catch (contentError) {
+              console.error(`Error checking specific content for ${bookmark.name}:`, contentError)
+            }
+          }
+
+          // If we've detected updates but don't have new content items yet, try to get them
+          if (hasUpdates && updatedBookmark.latestContent.length === bookmark.latestContent.length) {
+            try {
+              // Try to discover feeds first (in case a feed was added since last check)
+              if (!bookmark.feedUrl) {
+                const feedUrls = await discoverFeeds(bookmark.url)
+                if (feedUrls.length > 0) {
+                  const feedData = await parseFeed(feedUrls[0])
+
+                  if (feedData && feedData.items.length > 0) {
+                    // We found a feed! Update the bookmark with feed data
+                    updatedBookmark = {
+                      ...updatedBookmark,
+                      feedUrl: feedUrls[0],
+                      description: feedData.description || updatedBookmark.description,
                       lastUpdated: new Date().toISOString(),
-                      latestContent: [newContent, ...b.latestContent.map((content) => ({ ...content, isNew: false }))],
+                      latestContent: [
+                        ...feedData.items.slice(0, 3).map((item) => ({
+                          id: bookmark.id * 100 + Math.floor(Math.random() * 10000),
+                          title: item.title,
+                          summary: item.description,
+                          publishedAt: item.pubDate,
+                          url: item.link,
+                          isNew: true,
+                          isRead: false,
+                        })),
+                        ...bookmark.latestContent.map((content) => ({ ...content, isNew: false })),
+                      ],
                     }
-                  : b,
-              ),
+
+                    // Update the bookmark and return success
+                    set((state) => ({
+                      bookmarks: state.bookmarks.map((b) => (b.id === id ? updatedBookmark : b)),
+                    }))
+                    return true
+                  }
+                }
+              }
+
+              // If we couldn't get content from a feed, try to scrape the page
+              try {
+                const response = await fetch(bookmark.url, { cache: "no-store" })
+                const html = await response.text()
+                const dom = new JSDOM(html)
+                const document = dom.window.document
+
+                // Try to find the title
+                const titleElement = document.querySelector("h1, h2, .title, .headline, article h3")
+                const title = titleElement ? titleElement.textContent?.trim() : `New content from ${bookmark.name}`
+
+                // Try to find some content for the summary
+                const contentElement = document.querySelector("article p, .content p, main p")
+                const summary = contentElement
+                  ? contentElement.textContent?.trim()
+                  : `There appears to be new content on ${bookmark.name}. Click to visit the site.`
+
+                // Create a new content item
+                const newContent = {
+                  id: bookmark.id * 100 + Math.floor(Math.random() * 10000),
+                  title: title || `New content from ${bookmark.name}`,
+                  summary: summary || `There appears to be new content on ${bookmark.name}. Click to visit the site.`,
+                  publishedAt: new Date().toISOString(),
+                  url: bookmark.url,
+                  isNew: true,
+                  isRead: false,
+                }
+
+                updatedBookmark = {
+                  ...updatedBookmark,
+                  lastUpdated: new Date().toISOString(),
+                  latestContent: [
+                    newContent,
+                    ...bookmark.latestContent.map((content) => ({ ...content, isNew: false })),
+                  ],
+                }
+              } catch (scrapeError) {
+                console.error(`Error scraping content for ${bookmark.name}:`, scrapeError)
+
+                // If all else fails, generate a simulated content item
+                const newContent = generateSimulatedContent(bookmark)
+
+                updatedBookmark = {
+                  ...updatedBookmark,
+                  lastUpdated: new Date().toISOString(),
+                  latestContent: [
+                    newContent,
+                    ...bookmark.latestContent.map((content) => ({ ...content, isNew: false })),
+                  ],
+                }
+              }
+            } catch (contentFetchError) {
+              console.error(`Error fetching new content for ${bookmark.name}:`, contentFetchError)
+
+              // If all else fails, generate a simulated content item
+              const newContent = generateSimulatedContent(bookmark)
+
+              updatedBookmark = {
+                ...updatedBookmark,
+                lastUpdated: new Date().toISOString(),
+                latestContent: [newContent, ...bookmark.latestContent.map((content) => ({ ...content, isNew: false }))],
+              }
+            }
+          }
+
+          // Update the bookmark if we have changes
+          if (hasUpdates) {
+            set((state) => ({
+              bookmarks: state.bookmarks.map((b) => (b.id === id ? updatedBookmark : b)),
             }))
             return true
           }
@@ -303,8 +636,8 @@ export const useBookmarkStore = create<BookmarkState>()(
             const wasUpdated = await get().updateSingleBookmark(bookmark.id)
             if (wasUpdated) updatedCount++
 
-            // Small delay between updates
-            await new Promise((resolve) => setTimeout(resolve, 300))
+            // Small delay between updates to avoid overwhelming servers
+            await new Promise((resolve) => setTimeout(resolve, 500))
           } catch (error) {
             console.error(`Error updating bookmark ${bookmark.id}:`, error)
             // Continue with other bookmarks even if one fails

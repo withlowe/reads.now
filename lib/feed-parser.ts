@@ -42,13 +42,31 @@ export async function discoverFeeds(url: string): Promise<string[]> {
       "/feed/rss",
     ]
 
-    // Extract feed URLs from link tags
-    const linkRegex = /<link[^>]*rel=["'](alternate|feed)["'][^>]*href=["']([^"']*)["'][^>]*>/gi
-    let match
-    while ((match = linkRegex.exec(html)) !== null) {
-      const feedUrl = match[2]
-      if (feedUrl.includes("rss") || feedUrl.includes("atom") || feedUrl.includes("feed") || feedUrl.includes("xml")) {
-        feedUrls.push(new URL(feedUrl, baseUrl).href)
+    // Extract feed URLs from link tags using a simpler approach
+    const linkTags = html.match(/<link[^>]*>/gi) || []
+    for (const linkTag of linkTags) {
+      if (
+        linkTag.includes('rel="alternate"') ||
+        linkTag.includes('rel="feed"') ||
+        linkTag.includes("rel='alternate'") ||
+        linkTag.includes("rel='feed'")
+      ) {
+        const hrefMatch = linkTag.match(/href=["']([^"']*)["']/)
+        if (hrefMatch && hrefMatch[1]) {
+          const feedUrl = hrefMatch[1]
+          if (
+            feedUrl.includes("rss") ||
+            feedUrl.includes("atom") ||
+            feedUrl.includes("feed") ||
+            feedUrl.includes("xml")
+          ) {
+            try {
+              feedUrls.push(new URL(feedUrl, baseUrl).href)
+            } catch (e) {
+              console.error("Invalid URL:", feedUrl)
+            }
+          }
+        }
       }
     }
 

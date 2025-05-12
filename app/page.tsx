@@ -1,45 +1,31 @@
 "use client"
 
-import { useState } from "react"
-import { BookmarkFeed } from "@/components/bookmark-feed"
-import { VercelBackground } from "@/components/vercel-background"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { ArrowDown } from "lucide-react"
+import { SimpleBookmarkFeed } from "@/components/simple-bookmark-feed"
 
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [compactMode, setCompactMode] = useState(false)
-
   return (
     <div className="relative min-h-screen flex flex-col">
-      <VercelBackground />
       <div className="relative z-10 flex-1 flex flex-col">
-        <Header />
-
-        {!compactMode && (
-          <div className="w-full px-3 sm:px-4 py-12 sm:py-16 text-center">
-            <h1 className="mb-4">Your bookmarks, Always updated.</h1>
-            <p className="subtitle max-w-3xl mx-auto mb-4">Collect, organize, and stay updated with your bookmarks.</p>
-            <button
-              onClick={() => setCompactMode(true)}
-              className="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors gap-1"
-            >
-              <span>reads.now</span>
-              <ArrowDown className="h-3 w-3" />
-            </button>
+        <header className="border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
+          <div className="w-full px-3 sm:px-4 h-14 flex items-center justify-between">
+            <div className="font-medium flex items-center">
+              <span className="text-lg tracking-tight font-bold">Reads.now</span>
+            </div>
           </div>
-        )}
+        </header>
 
-        <div className={`w-full max-w-3xl mx-auto px-2 sm:px-4 ${compactMode ? "pt-4" : "pb-12 sm:pb-16"} flex-1`}>
-          <BookmarkFeed
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            compactMode={compactMode}
-            setCompactMode={setCompactMode}
-          />
+        <div className="w-full px-3 sm:px-4 py-12 sm:py-16 text-center">
+          <h1 className="mb-4">Your bookmarks, Always updated.</h1>
+          <p className="subtitle max-w-3xl mx-auto mb-4">Collect, organize, and stay updated with your bookmarks.</p>
         </div>
-        <Footer />
+
+        <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 pb-12 sm:pb-16 flex-1">
+          <SimpleBookmarkFeed />
+        </div>
+
+        <footer className="w-full py-6 text-center text-sm text-gray-400 dark:text-gray-500 transition-colors duration-300">
+          Built by Supervisual
+        </footer>
       </div>
     </div>
   )

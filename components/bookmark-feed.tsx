@@ -36,6 +36,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
     text: "",
     type: null,
   })
+  const [updateStats, setUpdateStats] = useState<{ total: number; updated: number } | null>(null)
 
   // Filter bookmarks based on search query
   const filteredBookmarks = bookmarks.filter((bookmark) => {
@@ -76,9 +77,22 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
   // Update bookmarks with new content
   const handleUpdateBookmarks = async () => {
     setIsUpdating(true)
+    setUpdateStats(null)
+
     try {
-      await updateBookmarks()
-      showStatus("Bookmarks updated successfully", "success")
+      const activeBookmarks = bookmarks.filter((b) => b.bookmarked).length
+      const updatedCount = await updateBookmarks()
+
+      setUpdateStats({
+        total: activeBookmarks,
+        updated: updatedCount,
+      })
+
+      if (updatedCount > 0) {
+        showStatus(`Updated ${updatedCount} of ${activeBookmarks} bookmarks`, "success")
+      } else {
+        showStatus(`No new content found in ${activeBookmarks} bookmarks`, "info")
+      }
     } catch (error) {
       console.error("Error updating bookmarks:", error)
       showStatus("Failed to update bookmarks", "error")
@@ -239,7 +253,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
               className="h-9 text-sm gap-1.5 flex-1 sm:flex-initial transition-colors duration-300"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isUpdating && "animate-spin")} />
-              {isUpdating ? "Checking sites..." : "Check for updates"}
+              {isUpdating ? "Refreshing..." : "Refresh"}
             </Button>
             <Button
               size="sm"
@@ -263,6 +277,21 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
             )}
           >
             {statusMessage.text}
+          </div>
+        )}
+
+        {/* Update stats */}
+        {updateStats && !statusMessage.type && (
+          <div className="px-4 py-2 text-sm text-center bg-gray-50 dark:bg-gray-800/50 transition-colors duration-300">
+            {updateStats.updated > 0 ? (
+              <span className="text-green-600 dark:text-green-400">
+                Updated {updateStats.updated} of {updateStats.total} bookmarks
+              </span>
+            ) : (
+              <span className="text-gray-500 dark:text-gray-400">
+                No new content found in {updateStats.total} bookmarks
+              </span>
+            )}
           </div>
         )}
 
@@ -388,7 +417,7 @@ export function BookmarkFeed({ searchQuery, setSearchQuery, compactMode, setComp
               ) : (
                 <div className="flex items-center justify-center p-6 text-red-600 dark:text-red-400 transition-colors duration-300">
                   <AlertCircle className="mr-2 h-5 w-5" />
-                  <p>Error importing bookmarks. Please try again.</p>
+                  <p>Error exporting bookmarks. Please try again.</p>
                 </div>
               )}
             </div>
@@ -415,17 +444,6 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
       console.error("Error formatting date:", error)
       return "Invalid date"
     }
-  }
-
-  // Highlight search terms in text
-  const highlightSearchTerm = (text: string) => {
-    if (!searchQuery.trim()) return text
-
-    const regex = new RegExp(`(${searchQuery.trim()})`, "gi")
-    return text.replace(
-      regex,
-      '<mark class="bg-yellow-100 dark:bg-yellow-900/50 px-0.5 transition-colors duration-300">$1</mark>',
-    )
   }
 
   // Get the latest content
@@ -463,14 +481,13 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
             target="_blank"
             rel="noopener noreferrer"
             className="text-lg sm:text-xl font-medium tracking-tight hover:text-[#00FF9D] transition-colors duration-300"
-            dangerouslySetInnerHTML={{
-              __html: searchQuery ? highlightSearchTerm(bookmark.name) : bookmark.name,
-            }}
             onClick={(e) => {
               // Stop propagation to prevent the parent div's click handler from firing
               e.stopPropagation()
             }}
-          />
+          >
+            {bookmark.name}
+          </a>
           {isNew && <span className="text-xs bg-[#00FF9D] text-black px-1.5 py-0.5 font-medium">New</span>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -492,11 +509,10 @@ function BookmarkEntry({ bookmark, onRemove, onContentClick, searchQuery }: Book
       {latestContent && (
         <div
           className="text-base sm:text-base font-medium text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors duration-300"
-          dangerouslySetInnerHTML={{
-            __html: searchQuery ? highlightSearchTerm(latestContent.title) : latestContent.title,
-          }}
           onClick={handleDescriptionClick}
-        />
+        >
+          {latestContent.title}
+        </div>
       )}
     </div>
   )
