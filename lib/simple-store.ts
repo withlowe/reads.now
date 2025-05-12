@@ -164,7 +164,9 @@ export const useBookmarkStore = create<BookmarkState>()(
 
         // Randomly select some bookmarks to update (for demo purposes)
         let updatedCount = 0
-        const updatedBookmarks = activeBookmarks.map((bookmark) => {
+        const updatedBookmarks = [...get().bookmarks]
+
+        for (const bookmark of activeBookmarks) {
           // Randomly decide if this bookmark has an update (50% chance)
           const hasUpdate = Math.random() > 0.5
 
@@ -187,23 +189,24 @@ export const useBookmarkStore = create<BookmarkState>()(
               isRead: false,
             }
 
-            // Mark existing content as not new
-            const updatedContent = bookmark.latestContent.map((content) => ({
-              ...content,
-              isNew: false,
-            }))
+            // Find the bookmark in our array
+            const bookmarkIndex = updatedBookmarks.findIndex((b) => b.id === bookmark.id)
+            if (bookmarkIndex !== -1) {
+              // Mark existing content as not new
+              const updatedContent = updatedBookmarks[bookmarkIndex].latestContent.map((content) => ({
+                ...content,
+                isNew: false,
+              }))
 
-            // Return updated bookmark
-            return {
-              ...bookmark,
-              lastUpdated: new Date().toISOString(),
-              latestContent: [newContent, ...updatedContent],
+              // Update the bookmark
+              updatedBookmarks[bookmarkIndex] = {
+                ...updatedBookmarks[bookmarkIndex],
+                lastUpdated: new Date().toISOString(),
+                latestContent: [newContent, ...updatedContent],
+              }
             }
           }
-
-          // No update for this bookmark
-          return bookmark
-        })
+        }
 
         // Update the store with the new bookmarks
         set({ bookmarks: updatedBookmarks })

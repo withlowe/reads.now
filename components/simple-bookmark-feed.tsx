@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { PlusIcon, RefreshCw, Upload } from "lucide-react"
+import { PlusIcon, RefreshCw, Upload, Search } from "lucide-react"
 import { useBookmarkStore } from "@/lib/simple-store"
 
 export function SimpleBookmarkFeed() {
@@ -13,9 +13,26 @@ export function SimpleBookmarkFeed() {
   const [isAddingBookmark, setIsAddingBookmark] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  // Filter only bookmarked sites
-  const activeBookmarks = bookmarks.filter((bookmark) => bookmark.bookmarked)
+  // Filter only bookmarked sites and apply search filter
+  const activeBookmarks = bookmarks.filter((bookmark) => {
+    // First filter for active bookmarks
+    if (!bookmark.bookmarked) return false
+
+    // If no search query, include all active bookmarks
+    if (!searchQuery.trim()) return true
+
+    // Otherwise, filter by search query
+    const query = searchQuery.toLowerCase()
+    return (
+      bookmark.name.toLowerCase().includes(query) ||
+      bookmark.description.toLowerCase().includes(query) ||
+      bookmark.latestContent.some(
+        (content) => content.title.toLowerCase().includes(query) || content.summary.toLowerCase().includes(query),
+      )
+    )
+  })
 
   // Sort bookmarks by last updated time (most recent first)
   const sortedBookmarks = [...activeBookmarks].sort((a, b) => {
@@ -74,17 +91,52 @@ export function SimpleBookmarkFeed() {
     }
   }
 
+  // Handle export bookmarks
+  const handleExportBookmarks = () => {
+    try {
+      // Create a JSON blob with the bookmarks
+      const data = { bookmarks: bookmarks }
+      const json = JSON.stringify(data, null, 2)
+      const blob = new Blob([json], { type: "application/json" })
+
+      // Create a download link and trigger it
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `bookmarks-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      // Show success status
+      setUpdateStatus("Bookmarks exported successfully")
+      setTimeout(() => {
+        setUpdateStatus(null)
+      }, 3000)
+    } catch (error) {
+      console.error("Error exporting bookmarks:", error)
+      setUpdateStatus("Error exporting bookmarks")
+      setTimeout(() => {
+        setUpdateStatus(null)
+      }, 3000)
+    }
+  }
+
   return (
     <div>
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-lg w-full transition-colors duration-300">
         <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-colors duration-300">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Bookmarks</h2>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+              {searchQuery ? `Search: "${searchQuery}"` : "Bookmarks"}
+            </h2>
 
             {/* Export icon */}
             <button
               className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors duration-300"
               title="Export bookmarks"
+              onClick={handleExportBookmarks}
             >
               <Upload className="h-4 w-4" />
               <span className="sr-only">Export</span>
@@ -106,6 +158,20 @@ export function SimpleBookmarkFeed() {
               <PlusIcon className="h-3.5 w-3.5 mr-1" />
               Add Bookmark
             </button>
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="search"
+              placeholder="Search bookmarks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-10 pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded transition-colors duration-300"
+            />
           </div>
         </div>
 
@@ -149,7 +215,11 @@ export function SimpleBookmarkFeed() {
         <div className="divide-y divide-gray-100 dark:divide-gray-800 transition-colors duration-300">
           {sortedBookmarks.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400 transition-colors duration-300">
-              <p className="text-base">No bookmarks yet. Add your first bookmark to get started.</p>
+              {searchQuery ? (
+                <p className="text-base">No bookmarks match your search query.</p>
+              ) : (
+                <p className="text-base">No bookmarks yet. Add your first bookmark to get started.</p>
+              )}
             </div>
           ) : (
             sortedBookmarks.map((bookmark) => (
